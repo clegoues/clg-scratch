@@ -488,7 +488,6 @@ let _ =
   let static_args = lfoldl (fun lst x ->
       let is_fout = x = "_coverage_fout" in
       if not (Hashtbl.mem va_table x) then begin
-      debug "adding %s\n" x; 
         let vi = makeVarinfo true x void_t in
         Hashtbl.add va_table x (vi, [GVarDecl(vi,locUnknown)], is_fout)
       end;

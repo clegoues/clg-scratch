@@ -41,9 +41,9 @@ let main () = begin
   let coverage_exename =  ((!instr_outdir)^"compiled.out") in
   (* step 2: compile instrumented files *)
   let _ = compile coverage_outname coverage_exename in 
+  (* step 3: run instrumented files on test cases *)
   let _ = run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt" in
     ()
-(* step 3: run instrumented files on test cases *)
 
 (* step 4: process output *)
     
