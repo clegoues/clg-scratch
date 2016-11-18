@@ -2,6 +2,7 @@ open Global
 open Cil
 
 let instr_outdir = ref "instrumented" 
+let coverage_outname = ref "covered.out"
 let prep_outdir = ref "preptmp"
 let preprocess_command = ref ""
 let compiler_name = ref "gcc" 
@@ -9,6 +10,7 @@ let compiler_options = ref ""
 
 let _ = options := !options @ 
 [
+  "--covout", Arg.Set_string coverage_outname, "X write coverage info to X."; 
   "--instrdir", Arg.Set_string instr_outdir, "X output instrumented code to X.  Default: \"instrumented/\"";
   "--prepcmd", Arg.Set_string preprocess_command, "X preprocessing command.";
   "--prepdir", Arg.Set_string prep_outdir, "X output dir for preprocessed code."
@@ -274,7 +276,9 @@ let toposort_globals ?roots:((roots: global list) = []) (globals: global list) =
   List.rev deps
 
 (* Only instrument functions in the actual file under consideration. *)
-let should_instrument_loc fname loc = true (* fixme *)
+let should_instrument_loc fname loc = 
+(*debug "actual fname is: %s, current loc fname is: %s\n" fname loc.file;*)
+true (* fixme *)
 
 
 let va_table = Hashtbl.create 10
@@ -319,10 +323,10 @@ class instrumentVisitor prototypes fname instr_outname = object
 
   method vfunc fd = 
     if should_instrument_loc fname fd.svar.vdecl then begin
-      let print_str = "if (fout == 0) {\n fout = fopen(%g:fout_g,%g:wb_arg);\nfprintf(fout, %g:str);\nfflush(fout);\n"
+      let print_str = "if (fout == 0) {\n fout = fopen(%g:fout_g,%g:wb_arg);\n}\n fprintf(fout, %g:str);\nfflush(fout);\n"
       in
       let newstmt = cstmt print_str 
-        [("fout_g",Fg instr_outname);("str",Fg(fname)); ("wb_arg", Fg("wb"))]
+        [("fout_g",Fg instr_outname);("str",Fg(fname)); ]
       in
         ChangeDoChildrenPost(fd,
                              (fun fd ->
@@ -344,9 +348,10 @@ let instrument_files (fmap) = begin
   let instrv = new instrumentVisitor prototypes in
   StringMap.iter 
     (fun fname cfile ->  
-      let source_dir,_,_ = split_base_subdirs_ext !instr_outdir in 
+      let source_dir = !instr_outdir in 
+      let coverage_outname = Filename.concat source_dir !coverage_outname in
       let outname = Filename.concat source_dir fname  in
-        visitCilFile (instrv fname outname) cfile;
+        visitCilFile (instrv fname coverage_outname) cfile;
         cfile.globals <- 
           StringMap.fold (fun _ protos accum ->
             protos @ accum
@@ -355,7 +360,7 @@ let instrument_files (fmap) = begin
           try
             cfile.globals <- toposort_globals cfile.globals;
           with MissingDefinition(s) ->
-            debug "cilRep: toposorting failure (%s)!\n" s;
+            debug "fileprocess: toposorting failure (%s)!\n" s;
       end;
       ensure_directories_exist outname;
       output_cil_file outname cfile
@@ -379,6 +384,7 @@ let preprocess src_outname exec_outname =
         "__SOURCE_NAME__", src_outname ;
       ]
     in
+     debug "preprocess command is %s\n" cmd;
     let result = match Unix.system cmd with
       | Unix.WEXITED(0) -> true
       | _ ->
@@ -397,7 +403,7 @@ let preprocess src_outname exec_outname =
 let _ = 
   fill_va_table := (fun () -> 
   let vnames =
-    [ "fclose"; "fflush"; "fopen"; "fprintf"; "memset" ]
+    [ "fclose"; "fflush"; "fopen"; "fprintf"; "memset"; "_coverage_fout" ]
   in
   if Hashtbl.length va_table = 0 then begin
     let source_file, chan = Filename.open_temp_file "tmp" ".c" in
@@ -454,16 +460,17 @@ let _ =
         )
       with Frontc.ParseError(msg) ->
       begin
-        debug "cilRep: fill_va_table: %s\n" msg;
+        debug "fileprocess: fill_va_table: %s\n" msg;
         Errormsg.hadErrors := false
       end
     end;
-    debug "cilRep: done preprocessing IO function signatures\n";
+    debug "fileprocess: done preprocessing IO function signatures\n";
     cleanup()
   end;
   let static_args = lfoldl (fun lst x ->
       let is_fout = x = "_coverage_fout" in
       if not (Hashtbl.mem va_table x) then begin
+      debug "adding %s\n" x; 
         let vi = makeVarinfo true x void_t in
         Hashtbl.add va_table x (vi, [GVarDecl(vi,locUnknown)], is_fout)
       end;
