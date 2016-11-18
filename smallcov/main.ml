@@ -19,7 +19,6 @@ let time_at_start = Unix.gettimeofday ()
 
 let main () = begin
   let aligned = Arg.align !options in
-  let usage_msg = "smallcov: figure out which test cases touch a file/function of interest" in
     Arg.parse aligned (usage_function aligned usage_msg) usage_msg;
   debug_out := open_out !debug_str ; 
 
@@ -36,8 +35,13 @@ let main () = begin
   (* step 1: instrument files *)
   let filemap = from_source !program in
   let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir in
+  let coverage_srcname = 
+    lfoldl (fun acc src -> acc^src^" ") "" instrumented_filenames
+  in
+  let coverage_exename =  ((!instr_outdir)^"compiled.out") in
   (* step 2: compile instrumented files *)
-  let _ = compile instrumented_filenames ((!instr_outdir)^"compiled.out") in    
+  let _ = compile coverage_outname coverage_exename in 
+  let _ = run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt" in
     ()
 (* step 3: run instrumented files on test cases *)
 

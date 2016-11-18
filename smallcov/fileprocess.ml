@@ -362,10 +362,7 @@ let instrument_files (fmap) coverage_outname source_dir = begin
 end
 
 
-let compile src_outname exec_outname =  (* FIXME: this takes a single source name *)
-  let src_outname = 
-    lfoldl (fun acc src -> acc^src^" ") "" src_outname
-  in
+let compile src_outname exec_outname =
   let base_command = 
     match !compiler_command with
     | "" -> 
