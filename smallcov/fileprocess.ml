@@ -363,6 +363,7 @@ end
 
 
 let compile src_outname exec_outname =
+debug "compiling: %s, %s\n" src_outname exec_outname; 
   let base_command = 
     match !compiler_command with
     | "" -> 
@@ -374,10 +375,11 @@ let compile src_outname exec_outname =
       [
         "__COMPILER_NAME__", !compiler_name ;
         "__COMPILER_OPTIONS__", !compiler_options ;
-        "__OUT_NAME__", exec_outname ;
         "__SOURCE_NAME__", src_outname ;
+	"__EXE_NAME__", exec_outname
       ]
     in
+    debug "compile cmd: %s\n" cmd;
     let result = match Unix.system cmd with
       | Unix.WEXITED(0) -> true
       | _ ->

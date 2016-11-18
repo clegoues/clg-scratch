@@ -26,8 +26,8 @@ let internal_test_case exe_name source_name test =
     let base_command = 
       match !test_command with 
       | "" -> 
-        "__TEST_SCRIPT__ __EXE_NAME__ __TEST_NAME__"^
-          "__SOURCE_NAME__ 1>/dev/null 2>/dev/null" 
+        "__TEST_SCRIPT__ __EXE_NAME__ __TEST_NAME__ "^
+          "__SOURCE_NAME__ "
     |  x -> x
       in
       let cmd = Global.replace_in_string base_command 
@@ -41,7 +41,8 @@ let internal_test_case exe_name source_name test =
         cmd
   in
     (* Run our single test. *) 
-    let start = Unix.gettimeofday () in
+debug "cmd: %s\n" cmd;
+
     let status = Stats2.time "test" Unix.system cmd in
       match status with 
       | Unix.WEXITED(0) -> true 

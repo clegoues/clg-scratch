@@ -38,9 +38,9 @@ let main () = begin
   let coverage_srcname = 
     lfoldl (fun acc src -> acc^src^" ") "" instrumented_filenames
   in
-  let coverage_exename =  ((!instr_outdir)^"compiled.out") in
+  let coverage_exename =  Filename.concat !instr_outdir "compiled.out" in
   (* step 2: compile instrumented files *)
-  let _ = compile coverage_outname coverage_exename in 
+  let _ = compile coverage_srcname coverage_exename in
   (* step 3: run instrumented files on test cases *)
   let _ = run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt" in
     ()
