@@ -45,6 +45,12 @@ let split_base_subdirs_ext name =
 let lfoldl = List.fold_left
 let liter = List.iter
 let lmem = List.mem
+let llen = List.length
+
+let (--) i j = 
+  let rec aux n acc =
+    if n < i then acc else aux (n-1) (n :: acc)
+  in aux j []
 
 let replace_in_string base_string list_of_replacements = 
   List.fold_left (fun acc (literal,replacement) ->

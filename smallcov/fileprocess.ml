@@ -1,20 +1,15 @@
 open Global
 open Cil
 
-let instr_outdir = ref "instrumented" 
-let coverage_outname = ref "covered.out"
-let prep_outdir = ref "preptmp"
 let preprocess_command = ref ""
+let compiler_command = ref ""
 let compiler_name = ref "gcc" 
 let compiler_options = ref "" 
 
 let _ = options := !options @ 
 [
-  "--covout", Arg.Set_string coverage_outname, "X write coverage info to X."; 
-  "--instrdir", Arg.Set_string instr_outdir, "X output instrumented code to X.  Default: \"instrumented/\"";
+  "--compcmd", Arg.Set_string compiler_command, "X use X as compiler command";
   "--prepcmd", Arg.Set_string preprocess_command, "X preprocessing command.";
-  "--prepdir", Arg.Set_string prep_outdir, "X output dir for preprocessed code."
-
 ]
 let cil_parse fname = Frontc.parse fname () 
 
@@ -343,13 +338,11 @@ let output_cil_file fname cfile =
     Cil.lineDirectiveStyle := old_directive_style;
     close_out fout
 
-let instrument_files (fmap) = begin
+let instrument_files (fmap) coverage_outname source_dir = begin
   let prototypes = ref StringMap.empty in
   let instrv = new instrumentVisitor prototypes in
-  StringMap.iter 
-    (fun fname cfile ->  
-      let source_dir = !instr_outdir in 
-      let coverage_outname = Filename.concat source_dir !coverage_outname in
+  StringMap.fold
+    (fun fname cfile accum ->  
       let outname = Filename.concat source_dir fname  in
         visitCilFile (instrv fname coverage_outname) cfile;
         cfile.globals <- 
@@ -363,9 +356,38 @@ let instrument_files (fmap) = begin
             debug "fileprocess: toposorting failure (%s)!\n" s;
       end;
       ensure_directories_exist outname;
-      output_cil_file outname cfile
-    ) fmap
+      output_cil_file outname cfile;
+      outname :: accum
+    ) fmap []
 end
+
+
+let compile src_outname exec_outname =  (* FIXME: this takes a single source name *)
+  let src_outname = 
+    lfoldl (fun acc src -> acc^src^" ") "" src_outname
+  in
+  let base_command = 
+    match !compiler_command with
+    | "" -> 
+      "__COMPILER_NAME__ -o __EXE_NAME__ __SOURCE_NAME__ __COMPILER_OPTIONS__ "^
+        "2>/dev/null >/dev/null"
+    |  x -> x
+  in
+    let cmd = Global.replace_in_string base_command
+      [
+        "__COMPILER_NAME__", !compiler_name ;
+        "__COMPILER_OPTIONS__", !compiler_options ;
+        "__OUT_NAME__", exec_outname ;
+        "__SOURCE_NAME__", src_outname ;
+      ]
+    in
+    let result = match Unix.system cmd with
+      | Unix.WEXITED(0) -> true
+      | _ ->
+        debug "\t%s %s fails to compile\n" src_outname exec_outname ;
+        false
+    in
+    result
 
 let void_t = Formatcil.cType "void *" [] 
 
@@ -384,7 +406,6 @@ let preprocess src_outname exec_outname =
         "__SOURCE_NAME__", src_outname ;
       ]
     in
-     debug "preprocess command is %s\n" cmd;
     let result = match Unix.system cmd with
       | Unix.WEXITED(0) -> true
       | _ ->

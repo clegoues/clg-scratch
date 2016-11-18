@@ -3,6 +3,17 @@
 
 open Global
 open Fileprocess
+open Runtests
+
+let coverage_outname = ref "covered.out"
+let instr_outdir = ref "instrumented" 
+
+let _ =
+  options := !options @
+    [ 
+      "--instrdir", Arg.Set_string instr_outdir, "X output instrumented code to X.  Default: \"instrumented/\"";
+      "--covout", Arg.Set_string coverage_outname, "X write coverage info to X."; 
+    ]
 
 let time_at_start = Unix.gettimeofday () 
 
@@ -21,8 +32,17 @@ let main () = begin
     debug_out := stdout ; 
   ) ; 
 
+  let coverage_outname = Filename.concat !instr_outdir !coverage_outname in
+  (* step 1: instrument files *)
   let filemap = from_source !program in
-    instrument_files filemap
+  let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir in
+  (* step 2: compile instrumented files *)
+  let _ = compile instrumented_filenames ((!instr_outdir)^"compiled.out") in    
+    ()
+(* step 3: run instrumented files on test cases *)
+
+(* step 4: process output *)
+    
 end ;;
 
 

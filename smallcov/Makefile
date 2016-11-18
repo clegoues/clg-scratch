@@ -77,6 +77,7 @@ BASE_MODULES = \
 REPAIR_MODULES = \
   $(BASE_MODULES) \
   fileprocess.cmo \
+  runtests.cmo \
   main.cmo
 
 STANDARD_LIBS = \
