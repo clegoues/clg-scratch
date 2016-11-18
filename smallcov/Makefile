@@ -98,4 +98,4 @@ smallcov: $(REPAIR_MODULES:.cmo=.cmx)
 -include $(ALL_MODULES:.cmo=.d)
 
 clean:
-	rm -f repair nhtserver repair.byte cdiff *.mli *.cmo *.cmi *.d *.cmx *.dx *.o lib_elf_stubs.a dll_elf_stubs.so $(ALL) ../doc/*
+	rm -f smallcov *.mli *.cmo *.cmi *.d *.cmx *.dx *.o $(ALL)

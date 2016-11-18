@@ -2,9 +2,17 @@ open Global
 open Cil
 
 let instr_outdir = ref "instrumented" 
+let prep_outdir = ref "preptmp"
+let preprocess_command = ref ""
+let compiler_name = ref "gcc" 
+let compiler_options = ref "" 
+
 let _ = options := !options @ 
 [
-  "--instrdir", Arg.Set_string instr_outdir, "X output instrumented code to X.  Default: \"instrumented/\""
+  "--instrdir", Arg.Set_string instr_outdir, "X output instrumented code to X.  Default: \"instrumented/\"";
+  "--prepcmd", Arg.Set_string preprocess_command, "X preprocessing command.";
+  "--prepdir", Arg.Set_string prep_outdir, "X output dir for preprocessed code."
+
 ]
 let cil_parse fname = Frontc.parse fname () 
 
@@ -314,7 +322,7 @@ class instrumentVisitor prototypes fname instr_outname = object
       let print_str = "if (fout == 0) {\n fout = fopen(%g:fout_g,%g:wb_arg);\nfprintf(fout, %g:str);\nfflush(fout);\n"
       in
       let newstmt = cstmt print_str 
-        [("fout_g",Fg instr_outname);("str",Fg(fname)); ]
+        [("fout_g",Fg instr_outname);("str",Fg(fname)); ("wb_arg", Fg("wb"))]
       in
         ChangeDoChildrenPost(fd,
                              (fun fd ->
@@ -323,17 +331,17 @@ class instrumentVisitor prototypes fname instr_outname = object
     end else SkipChildren
 end
 
-let instrument_files (fmap) = begin
-  let prototypes = ref StringMap.empty in
-  let instrv = new instrumentVisitor prototypes in
-  let output_cil_file fname cfile = 
+let output_cil_file fname cfile = 
   let fout = open_out fname in
   let old_directive_style = !Cil.lineDirectiveStyle in
     Cil.lineDirectiveStyle := None ; 
     iterGlobals cfile (dumpGlobal defaultCilPrinter fout);
     Cil.lineDirectiveStyle := old_directive_style;
     close_out fout
-  in
+
+let instrument_files (fmap) = begin
+  let prototypes = ref StringMap.empty in
+  let instrv = new instrumentVisitor prototypes in
   StringMap.iter 
     (fun fname cfile ->  
       let source_dir,_,_ = split_base_subdirs_ext !instr_outdir in 
@@ -356,7 +364,29 @@ end
 
 let void_t = Formatcil.cType "void *" [] 
 
-let preprocess cfile fname = true (* fixme *)
+let preprocess src_outname exec_outname =
+  let base_command = 
+    match !preprocess_command with
+    | "" ->
+      "__COMPILER_NAME__ -E __SOURCE_NAME__ __COMPILER_OPTIONS__ > __OUT_NAME__"
+    | x -> x
+  in
+    let cmd = Global.replace_in_string base_command
+      [
+        "__COMPILER_NAME__", !compiler_name ;
+        "__COMPILER_OPTIONS__", !compiler_options ;
+        "__OUT_NAME__", exec_outname ;
+        "__SOURCE_NAME__", src_outname ;
+      ]
+    in
+    let result = match Unix.system cmd with
+      | Unix.WEXITED(0) -> true
+      | _ ->
+        debug "\t%s %s fails to preprocess\n" src_outname exec_outname ;
+        false
+    in
+    result
+
 (* For most functions, we would like to use the prototypes as defined in the
    standard library used for this compiler. We do this by preprocessing a simple
    C file and extracting the prototypes from there. Since this should only
@@ -386,17 +416,17 @@ let _ =
       if Sys.file_exists preprocessed then
         Sys.remove preprocessed
     in
-    if preprocess source_file preprocessed then begin
+    if preprocess source_file preprocessed  then begin
       try
         let cilfile = 
           try cil_parse preprocessed 
           with e -> 
-            debug "cilrep: fill_va_table: Frontc.parse: %s\n" 
+            debug "fileprocess: fill_va_table: Frontc.parse: %s\n" 
               (Printexc.to_string e) ; raise e 
         in
         if !Errormsg.hadErrors then
           Errormsg.parse_error
-            "cilRep: fill_va_table: failure while preprocessing stdio header file declarations\n";
+            "fileprocess: fill_va_table: failure while preprocessing stdio header file declarations\n";
         iterGlobals cilfile (fun g ->
           match g with
           | GVarDecl(vi,_) | GVar(vi,_,_) when lmem vi.vname vnames ->

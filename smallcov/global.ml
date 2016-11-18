@@ -46,6 +46,11 @@ let lfoldl = List.fold_left
 let liter = List.iter
 let lmem = List.mem
 
+let replace_in_string base_string list_of_replacements = 
+  List.fold_left (fun acc (literal,replacement) ->
+    let regexp = Str.regexp (Str.quote literal) in
+      Str.global_replace regexp replacement acc 
+  ) base_string list_of_replacements 
 
 (** given "a/b/c.txt", create "a/" and then "a/b/" if they don't already exist *)
 let rec ensure_directories_exist filename = 
@@ -74,10 +79,14 @@ end
 module StringMap = Map.Make(OrderedString)
 
 let program = ref ""
-let debug_str = ref ""
+let debug_str = ref "debug.txt"
 
 let options = ref [
   "--program", Arg.Set_string program, "X repair X";
   "--debug", Arg.Set_string debug_str, "X print debug to X";
 ] 
+
+let usage_function aligned usage_msg x = 
+  debug "usage: unknown option %s\n" x;
+  Arg.usage aligned usage_msg; abort "usage"
 
