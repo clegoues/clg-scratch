@@ -8,9 +8,9 @@ open Fileprocess
 let main () = begin
 (* FIXME: parse options *)
 
-  debug_out := open_out debug_str ; 
+  debug_out := open_out !debug_str ; 
   let filemap = from_source !program in
-    
+()    
 
 
 end

@@ -44,6 +44,7 @@ let split_base_subdirs_ext name =
 
 let lfoldl = List.fold_left
 let liter = List.iter
+let lmem = List.mem
 
 
 (** given "a/b/c.txt", create "a/" and then "a/b/" if they don't already exist *)
