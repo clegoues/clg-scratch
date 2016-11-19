@@ -76,6 +76,7 @@ BASE_MODULES = \
   global.cmo 
 REPAIR_MODULES = \
   $(BASE_MODULES) \
+  cilinstr.cmo \
   fileprocess.cmo \
   runtests.cmo \
   main.cmo

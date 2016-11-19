@@ -1,16 +1,12 @@
-open Str
-open Printf
-open Unix
-open Pervasives
+open Cil
 
-let debug_out = ref stdout 
-(**/**)
-(** we copy all debugging output to a file and to stdout *)
+let debug_out = ref Pervasives.stdout 
+
 let debug ?force_gui:(force_gui=false) fmt = 
   let k result = begin
       output_string !debug_out result ; 
-      output_string stdout result ; 
-      flush stdout ; 
+      output_string Pervasives.stdout result ; 
+      flush Pervasives.stdout ; 
       flush !debug_out;
   end in
     Printf.kprintf k fmt 
@@ -18,8 +14,8 @@ let debug ?force_gui:(force_gui=false) fmt =
 let abort fmt = 
   let k result = begin
       output_string !debug_out result ; 
-      output_string stdout result ; 
-      flush stdout ; 
+      output_string Pervasives.stdout result ; 
+      flush Pervasives.stdout ; 
       flush !debug_out;
     exit 1 
   end in
@@ -45,7 +41,10 @@ let split_base_subdirs_ext name =
 let lfoldl = List.fold_left
 let liter = List.iter
 let lmem = List.mem
+let lsort = List.sort
+let lmap = List.map
 let llen = List.length
+let lfilt = List.filter
 
 let (--) i j = 
   let rec aux n acc =
@@ -87,10 +86,13 @@ let space_regexp = Str.regexp "[ \t]+"
 
 let program = ref ""
 let debug_str = ref "debug.txt"
+let compiler_name = ref "gcc" 
+let compiler_options = ref "" 
 
 let options = ref [
   "--program", Arg.Set_string program, "X repair X";
   "--debug", Arg.Set_string debug_str, "X print debug to X";
+  "--cc", Arg.Set_string compiler_name, "X compiler (default: gcc";
 ] 
 
 
@@ -117,3 +119,14 @@ let parse_options_in_file (file : string) : unit =
 
 let usage_function aligned usage_msg x = 
   parse_options_in_file x
+
+let cil_parse fname = Frontc.parse fname () 
+
+let output_cil_file fname cfile = 
+  let fout = open_out fname in
+  let old_directive_style = !Cil.lineDirectiveStyle in
+    Cil.lineDirectiveStyle := None ; 
+    iterGlobals cfile (dumpGlobal defaultCilPrinter fout);
+    Cil.lineDirectiveStyle := old_directive_style;
+    close_out fout
+

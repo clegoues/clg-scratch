@@ -33,8 +33,10 @@ let main () = begin
 
   let coverage_outname = Filename.concat !instr_outdir !coverage_outname in
   (* step 1: instrument files *)
+    (* next step: if available, read in diff file to only instrument functions modified by human developer *)
+  let diffiles = process_diffs () in
   let filemap = from_source !program in
-  let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir in
+  let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir diffiles in
   let coverage_srcname = 
     lfoldl (fun acc src -> acc^src^" ") "" instrumented_filenames
   in
