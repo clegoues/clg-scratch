@@ -23,9 +23,8 @@ let process_diffs () =
   let diff_files = 
     lmap (fun fname -> 
       let loc = Str.search_backward diff_suff fname (String.length fname) in
-        fname,String.sub fname 0 loc) diff_files 
+        String.sub fname 0 loc,fname) diff_files 
   in
-
   (* normal diff output (expected for mp scenarios) commands have the form RcT,
      where R and T are ranges and c is the command.  R and T can either be
      single numbers or ranges of the form n1,n2.  The first match checks if this
@@ -43,7 +42,7 @@ let process_diffs () =
               if Str.string_match comma matched 0 then begin
                 let char = Str.search_forward comma matched 0 in
                 let frst = String.sub matched 0 char in 
-                let scnd = String.sub matched (char + 1) (String.length matched) in
+                let scnd = String.sub matched (char + 1) (String.length matched) in 
                   (int_of_string frst, int_of_string scnd) :: acc
               end else 
                 let line = int_of_string matched in
@@ -167,6 +166,8 @@ let instrument_files (fmap) coverage_outname source_dir diffiles = begin
       let ranges = StringMap.find fname diffiles in
       let ranges = lsort (fun (x1,y1) (x2,y2) -> y1 - y2) ranges in 
       let fns = findFunctions cfile ranges in
+      debug "Functions modified:\n"; 
+      liter (fun fname -> debug "\t%s\n" fname) fns;
         visitCilFile (instrv fns fname) cfile;
         cfile.globals <- 
           StringMap.fold (fun _ protos accum ->
