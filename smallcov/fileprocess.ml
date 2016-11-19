@@ -186,14 +186,17 @@ let instrument_files (fmap) coverage_outname source_dir diffiles = begin
 end
 
 let from_source (filename : string) = 
+  let getfname fname = 
+    if Sys.file_exists fname then fname else Filename.concat !prefix filename 
+  in
   let _,ext = split_ext filename in 
     match ext with
       "txt" -> lfoldl 
         (fun map fname ->
-          StringMap.add fname (cil_parse fname) map)
+          StringMap.add fname (cil_parse (getfname fname)) map)
         (StringMap.empty) (get_lines filename)
     | "c" | "i" ->
-      let parsed = cil_parse filename in
+      let parsed = cil_parse (getfname filename) in
         StringMap.add filename parsed (StringMap.empty)
     | _  ->  abort "Unexpected file extension %s in fileProcess#from_source.  Permitted: .c, .i,, .txt" ext
 

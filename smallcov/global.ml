@@ -88,13 +88,14 @@ let program = ref ""
 let debug_str = ref "debug.txt"
 let compiler_name = ref "gcc" 
 let compiler_options = ref "" 
+let prefix = ref ""
 
 let options = ref [
   "--program", Arg.Set_string program, "X repair X";
   "--debug", Arg.Set_string debug_str, "X print debug to X";
-  "--cc", Arg.Set_string compiler_name, "X compiler (default: gcc";
+  "--cc", Arg.Set_string compiler_name, "X compiler (default: gcc)";
+  "--prefix", Arg.Set_string prefix, "X prefix to location of files";
 ] 
-
 
 let usage_msg = "smallcov: figure out which test cases touch a file/function of interest"
 
