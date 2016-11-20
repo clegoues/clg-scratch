@@ -5,15 +5,20 @@ open Cilinstr
 let compiler_command = ref ""
 let diff_files = ref ""
 let dprefix = ref "diffs"
+let funcs = ref ""
 
 let _ = options := !options @ 
 [
   "--compcmd", Arg.Set_string compiler_command, "X use X as compiler command";
   "--diffs", Arg.Set_string diff_files, "X diff files (one, or a list) to indicate lines modified by human.";
-"--dprefix", Arg.Set_string dprefix, "X prefix to find diff files.  Default: diffs/"
+  "--dprefix", Arg.Set_string dprefix, "X prefix to find diff files.  Default: diffs/";
+  "--fns", Arg.Set_string funcs, "X functions to be instrumented.";
 ]
 
 let process_diffs () =
+  if !funcs <> "" then begin
+    StringMap.empty (* TODO: implement specify by hand *)
+  end else begin
   let diff_suff = Str.regexp "-diff" in
   let diff_files = (* actual diff files, assumed naming format: fname.c-diff *)
     let _, ext = split_ext !diff_files in
@@ -24,7 +29,7 @@ let process_diffs () =
   (* get the actual files, paired with associated diff file *)
   let diff_files = 
     lmap (fun fname -> 
-let tmpfname = if Sys.file_exists fname then fname else Filename.concat !dprefix fname in 
+      let tmpfname = if Sys.file_exists fname then fname else Filename.concat !dprefix fname in 
       let loc = Str.search_backward diff_suff fname (String.length fname) in
         String.sub fname 0 loc,tmpfname) diff_files 
   in
@@ -35,27 +40,29 @@ let tmpfname = if Sys.file_exists fname then fname else Filename.concat !dprefix
      third figures out if there's a comma.  *)
   let change_comm = Str.regexp "^[0-9]+\(,[0-9]+\)?\(a\|c\|d\)[0-9]+\(,[0-9]+\)?$" in
   let range = Str.regexp "^[0-9]+\(,[0-9]+\)?" in
-  let comma = Str.regexp_string "," in
+  let comma = Str.regexp "," in
     lfoldl (fun acc (fname,diffile) ->
-debug "Fname: %s, diffile: %s\n";
       let linepairs = 
         lfoldl (fun acc line -> 
           if Str.string_match change_comm line 0 then begin
-            let rangem = Str.string_match range line 0 in
+            let _ = Str.string_match range line 0 in
             let matched = Str.matched_string line in 
-              if Str.string_match comma matched 0 then begin
+              try 
                 let char = Str.search_forward comma matched 0 in
                 let frst = String.sub matched 0 char in 
-                let scnd = String.sub matched (char + 1) (String.length matched) in 
+                let slen = (String.length matched) - char - 1 in 
+                let scnd = String.sub matched (char + 1) slen in 
                   (int_of_string frst, int_of_string scnd) :: acc
-              end else 
+              with Not_found -> begin
                 let line = int_of_string matched in
                   (line,line) :: acc
+              end
           end else acc) [] (get_lines diffile)
       in
         StringMap.add fname linepairs acc 
     ) (StringMap.empty) diff_files 
-    
+  end
+
 let get_gloc = function 
 | GType(_,loc) | GCompTag(_,loc) | GCompTagDecl(_,loc)
 | GEnumTag(_,loc) | GEnumTagDecl(_,loc) | GVarDecl(_,loc)

@@ -37,7 +37,7 @@ let main () = begin
       Filename.concat (Sys.getcwd ()) coverage_outname
     else coverage_outname
   in  
-debug "coverage_outname: %s\n" coverage_outname;
+    debug "coverage_outname: %s\n" coverage_outname;
   (* step 1: instrument files *)
     (* next step: if available, read in diff file to only instrument functions modified by human developer *)
   let diffiles = process_diffs () in
