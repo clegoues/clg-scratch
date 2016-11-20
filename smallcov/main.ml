@@ -54,7 +54,6 @@ let main () = begin
      run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt"
     else 
       debug "failed to compile instrumented code; giving up.\n"
-    
 end ;;
 
 

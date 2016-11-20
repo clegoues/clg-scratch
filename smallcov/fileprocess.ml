@@ -70,12 +70,13 @@ let get_gloc = function
 (* not handling GText, so hopefully it never happens.  Famous last words *)
 
 (* precondition: ranges sorted by where they end *)
-let findFunctions cfile ranges = begin
+let findFunctions fname cfile ranges = begin
+    let fname_regexp = Str.regexp_string fname in 
   (* drop ranges that end before a location starts.  Acceptable because globals
      are in the order they appear in the file and ranges are sorted by where
      they end.  May not need this? *)
   let rec dropranges loc ranges = 
-match ranges with 
+    match ranges with 
     | [] -> []
     | (x,y) :: rs -> 
       if y < loc then dropranges loc rs
@@ -99,17 +100,21 @@ match ranges with
        that last function *)
       | [GFun(fd,loc)] -> fd.svar.vname :: fnames 
       | [x] -> fnames
-      | GFun(fd,loc) :: g :: gs -> 
+      | GFun(fd,loc) :: g :: gs -> begin
+           try
+         (* ignore globals in files we're not actually considering *)
+             let _ = Str.search_forward fname_regexp loc.file 0 in
       (* this stupidity is due to the fact that we can tell where things start,
          but not where they end. *)
-        begin        
           let ranges = dropranges loc.line ranges in
           let keep,rest = 
             doOverlap (loc.line,((get_gloc g).line - 1)) false ranges 
           in
           let fnames = if keep then (fd.svar.vname :: fnames) else fnames in
             iterGlobals rest (g :: gs) fnames
-        end
+       with Not_found -> 
+    iterGlobals ranges (g :: gs) fnames
+      end
       | _ :: gs -> iterGlobals ranges gs fnames
     end
   in
@@ -176,7 +181,7 @@ let instrument_files (fmap) coverage_outname source_dir diffiles = begin
         (* assuming all files have diffs, for now *)
       let ranges = StringMap.find fname diffiles in
       let ranges = lsort (fun (x1,y1) (x2,y2) -> y1 - y2) ranges in 
-      let fns = findFunctions cfile ranges in
+      let fns = findFunctions fname cfile ranges in
       debug "Functions modified:\n"; 
       liter (fun fname -> debug "\t%s\n" fname) fns;
         visitCilFile (instrv fns fname) cfile;
