@@ -12,27 +12,31 @@ let _ = options := !options @
   "--compcmd", Arg.Set_string compiler_command, "X use X as compiler command";
   "--diffs", Arg.Set_string diff_files, "X diff files (one, or a list) to indicate lines modified by human.";
   "--dprefix", Arg.Set_string dprefix, "X prefix to find diff files.  Default: diffs/";
-  "--fns", Arg.Set_string funcs, "X functions to be instrumented.";
+  "--fns", Arg.Set_string funcs, "X functions to be instrumented (either a file listing, or a pair of a filename;comma-separated fn-list).";
 ]
 
-let process_diffs () =
-  if !funcs <> "" then begin
-    StringMap.empty (* TODO: implement specify by hand *)
-  end else begin
-  let diff_suff = Str.regexp "-diff" in
-  let diff_files = (* actual diff files, assumed naming format: fname.c-diff *)
-    let _, ext = split_ext !diff_files in
-      match ext with
-        "txt" -> get_lines !diff_files 
-      | _ -> [!diff_files]
-  in
-  (* get the actual files, paired with associated diff file *)
-  let diff_files = 
-    lmap (fun fname -> 
-      let tmpfname = if Sys.file_exists fname then fname else Filename.concat !dprefix fname in 
-      let loc = Str.search_backward diff_suff fname (String.length fname) in
-        String.sub fname 0 loc,tmpfname) diff_files 
-  in
+let get_available_fns () = 
+  match !funcs with
+    "" -> StringMap.empty
+  | _ -> StringMap.empty
+
+let get_available_diffs () = 
+  (* return a map between regular filenames and difffile names, as available *)
+  match !diff_files with
+    "" -> StringMap.empty
+  | _ ->
+    (* assumed naming format: fname.c-diff *)
+    let diff_suff = Str.regexp "-diff" in
+      lfoldl (fun acc fname -> 
+        let dfile = 
+          if Sys.file_exists fname then fname 
+          else Filename.concat !dprefix fname 
+        in 
+        let loc = Str.search_backward diff_suff fname (String.length fname) in
+        let actual_fname = String.sub fname 0 loc in
+          StringMap.add actual_fname dfile acc) (StringMap.empty) (get_files !diff_files)
+
+let process_diff fname dfile = (* returns a list of ranges *)
   (* normal diff output (expected for mp scenarios) commands have the form RcT,
      where R and T are ranges and c is the command.  R and T can either be
      single numbers or ranges of the form n1,n2.  The first match checks if this
@@ -41,27 +45,21 @@ let process_diffs () =
   let change_comm = Str.regexp "^[0-9]+\(,[0-9]+\)?\(a\|c\|d\)[0-9]+\(,[0-9]+\)?$" in
   let range = Str.regexp "^[0-9]+\(,[0-9]+\)?" in
   let comma = Str.regexp "," in
-    lfoldl (fun acc (fname,diffile) ->
-      let linepairs = 
-        lfoldl (fun acc line -> 
-          if Str.string_match change_comm line 0 then begin
-            let _ = Str.string_match range line 0 in
-            let matched = Str.matched_string line in 
-              try 
-                let char = Str.search_forward comma matched 0 in
-                let frst = String.sub matched 0 char in 
-                let slen = (String.length matched) - char - 1 in 
-                let scnd = String.sub matched (char + 1) slen in 
-                  (int_of_string frst, int_of_string scnd) :: acc
-              with Not_found -> begin
-                let line = int_of_string matched in
-                  (line,line) :: acc
-              end
-          end else acc) [] (get_lines diffile)
-      in
-        StringMap.add fname linepairs acc 
-    ) (StringMap.empty) diff_files 
-  end
+    lfoldl (fun acc line -> 
+      if Str.string_match change_comm line 0 then begin
+        let _ = Str.string_match range line 0 in
+        let matched = Str.matched_string line in 
+          try 
+            let char = Str.search_forward comma matched 0 in
+            let frst = String.sub matched 0 char in 
+            let slen = (String.length matched) - char - 1 in 
+            let scnd = String.sub matched (char + 1) slen in 
+              (int_of_string frst, int_of_string scnd) :: acc
+          with Not_found -> begin
+            let line = int_of_string matched in
+              (line,line) :: acc
+          end
+      end else acc) [] (get_lines dfile)
 
 let get_gloc = function 
 | GType(_,loc) | GCompTag(_,loc) | GCompTagDecl(_,loc)
@@ -70,7 +68,7 @@ let get_gloc = function
 (* not handling GText, so hopefully it never happens.  Famous last words *)
 
 (* precondition: ranges sorted by where they end *)
-let findFunctions fname cfile ranges = begin
+let findFnByRanges fname cfile ranges = begin
     let fname_regexp = Str.regexp_string fname in 
   (* drop ranges that end before a location starts.  Acceptable because globals
      are in the order they appear in the file and ranges are sorted by where
@@ -171,34 +169,42 @@ class instrumentVisitor prototypes instr_outname fns fname = object
     end else SkipChildren
 end
 
-(* diffiles maps filanems to lists of line ranges *)
-let instrument_files (fmap) coverage_outname source_dir diffiles = begin
+let instrument_files fmap coverage_outname source_dir = begin
+  let avail_dfiles = get_available_diffs () in
+  let avail_fspecs = get_available_fns () in
+  let get_fns fname cfile = 
+    try
+      StringMap.find fname avail_fspecs
+    with Not_found ->
+      let dfile = StringMap.find fname avail_dfiles in
+      let ranges = process_diff fname dfile in
+      let ranges = lsort (fun (x1,y1) (x2,y2) -> y1 - y2) ranges in 
+        findFnByRanges fname cfile ranges 
+  in
   let prototypes = ref StringMap.empty in
   let instrv = new instrumentVisitor prototypes coverage_outname in
-  StringMap.fold
-    (fun fname cfile accum ->  
-      let outname = Filename.concat source_dir fname  in
-        (* assuming all files have diffs, for now *)
-      let ranges = StringMap.find fname diffiles in
-      let ranges = lsort (fun (x1,y1) (x2,y2) -> y1 - y2) ranges in 
-      let fns = findFunctions fname cfile ranges in
-      debug "Functions modified:\n"; 
-      liter (fun fname -> debug "\t%s\n" fname) fns;
-        visitCilFile (instrv fns fname) cfile;
-        cfile.globals <- 
-          StringMap.fold (fun _ protos accum ->
-            protos @ accum
-          ) !prototypes cfile.globals;
-        begin
-          try
-            cfile.globals <- toposort_globals cfile.globals;
-          with MissingDefinition(s) ->
-            debug "fileprocess: toposorting failure (%s)!\n" s;
-      end;
-      ensure_directories_exist outname;
-      output_cil_file outname cfile;
-      outname :: accum
-    ) fmap []
+    StringMap.fold
+      (fun fname cfile accum ->  
+        let outname = Filename.concat source_dir fname  in
+      (* assuming all files have diffs, for now *)
+        let fns = get_fns fname cfile in 
+          debug "Functions modified:\n"; 
+          liter (fun fname -> debug "\t%s\n" fname) fns;
+          visitCilFile (instrv fns fname) cfile;
+          cfile.globals <- 
+            StringMap.fold (fun _ protos accum ->
+              protos @ accum
+            ) !prototypes cfile.globals;
+          begin
+            try
+              cfile.globals <- toposort_globals cfile.globals;
+            with MissingDefinition(s) ->
+              debug "fileprocess: toposorting failure (%s)!\n" s;
+          end;
+          ensure_directories_exist outname;
+          output_cil_file outname cfile;
+          outname :: accum
+      ) fmap []
 end
 
 let from_source (filename : string) = 

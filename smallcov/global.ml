@@ -75,6 +75,12 @@ let get_lines (filename : string) : string list =
      with End_of_file -> close_in fin);
     List.rev !res
 
+let get_files fname = 
+  let _, ext = split_ext fname in
+    match ext with
+      "txt" -> get_lines fname
+    | _ -> [fname]
+
 module OrderedString =
 struct
   type t = string
