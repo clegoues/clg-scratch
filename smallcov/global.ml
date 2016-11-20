@@ -88,7 +88,9 @@ struct
 end
 
 module StringMap = Map.Make(OrderedString)
-let space_regexp = Str.regexp "[ \t]+" 
+let space = Str.regexp "[ \t]+" 
+let comma = Str.regexp ","
+let semicolon = Str.regexp ";"
 
 let program = ref ""
 let debug_str = ref "debug.txt"
@@ -113,7 +115,7 @@ let parse_options_in_file (file : string) : unit =
               let line = input_line fin in
                 if line <> "" && line.[0] <> '#' then begin 
         (* allow #comments *) 
-        let words = Str.bounded_split space_regexp line 2 in 
+        let words = Str.bounded_split space line 2 in 
         args := !args @ words 
       end 
     done with _ -> close_in fin) ;

@@ -18,7 +18,15 @@ let _ = options := !options @
 let get_available_fns () = 
   match !funcs with
     "" -> StringMap.empty
-  | _ -> StringMap.empty
+  | _ ->  
+    lfoldl
+      (fun acc line ->
+        match Str.split semicolon line with
+          [file; fns] -> 
+            let fns = Str.split comma fns in
+              StringMap.add file fns acc
+        | _ -> acc
+      ) (StringMap.empty) (get_files !funcs)
 
 let get_available_diffs () = 
   (* return a map between regular filenames and difffile names, as available *)
@@ -44,7 +52,6 @@ let process_diff fname dfile = (* returns a list of ranges *)
      third figures out if there's a comma.  *)
   let change_comm = Str.regexp "^[0-9]+\(,[0-9]+\)?\(a\|c\|d\)[0-9]+\(,[0-9]+\)?$" in
   let range = Str.regexp "^[0-9]+\(,[0-9]+\)?" in
-  let comma = Str.regexp "," in
     lfoldl (fun acc line -> 
       if Str.string_match change_comm line 0 then begin
         let _ = Str.string_match range line 0 in
@@ -186,7 +193,6 @@ let instrument_files fmap coverage_outname source_dir = begin
     StringMap.fold
       (fun fname cfile accum ->  
         let outname = Filename.concat source_dir fname  in
-      (* assuming all files have diffs, for now *)
         let fns = get_fns fname cfile in 
           debug "Functions modified:\n"; 
           liter (fun fname -> debug "\t%s\n" fname) fns;
