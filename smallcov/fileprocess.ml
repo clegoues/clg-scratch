@@ -4,11 +4,13 @@ open Cilinstr
 
 let compiler_command = ref ""
 let diff_files = ref ""
+let dprefix = ref "diffs"
 
 let _ = options := !options @ 
 [
   "--compcmd", Arg.Set_string compiler_command, "X use X as compiler command";
-  "--diffs", Arg.Set_string diff_files, "X diff files (one, or a list) to indicate lines modified by human."
+  "--diffs", Arg.Set_string diff_files, "X diff files (one, or a list) to indicate lines modified by human.";
+"--dprefix", Arg.Set_string dprefix, "X prefix to find diff files.  Default: diffs/"
 ]
 
 let process_diffs () =
@@ -22,8 +24,9 @@ let process_diffs () =
   (* get the actual files, paired with associated diff file *)
   let diff_files = 
     lmap (fun fname -> 
+let tmpfname = if Sys.file_exists fname then fname else Filename.concat !dprefix fname in 
       let loc = Str.search_backward diff_suff fname (String.length fname) in
-        String.sub fname 0 loc,fname) diff_files 
+        String.sub fname 0 loc,tmpfname) diff_files 
   in
   (* normal diff output (expected for mp scenarios) commands have the form RcT,
      where R and T are ranges and c is the command.  R and T can either be
@@ -34,6 +37,7 @@ let process_diffs () =
   let range = Str.regexp "^[0-9]+\(,[0-9]+\)?" in
   let comma = Str.regexp_string "," in
     lfoldl (fun acc (fname,diffile) ->
+debug "Fname: %s, diffile: %s\n";
       let linepairs = 
         lfoldl (fun acc line -> 
           if Str.string_match change_comm line 0 then begin
@@ -52,7 +56,6 @@ let process_diffs () =
         StringMap.add fname linepairs acc 
     ) (StringMap.empty) diff_files 
     
-
 let get_gloc = function 
 | GType(_,loc) | GCompTag(_,loc) | GCompTagDecl(_,loc)
 | GEnumTag(_,loc) | GEnumTagDecl(_,loc) | GVarDecl(_,loc)
@@ -64,11 +67,12 @@ let findFunctions cfile ranges = begin
   (* drop ranges that end before a location starts.  Acceptable because globals
      are in the order they appear in the file and ranges are sorted by where
      they end.  May not need this? *)
-  let rec dropranges loc = function
+  let rec dropranges loc ranges = 
+match ranges with 
     | [] -> []
     | (x,y) :: rs -> 
       if y < loc then dropranges loc rs
-      else rs
+      else ranges
   in
   (* return whether we should retain this function, and any ranges that are
      unhandled afterwards *)
@@ -187,7 +191,7 @@ end
 
 let from_source (filename : string) = 
   let getfname fname = 
-    if Sys.file_exists fname then fname else Filename.concat !prefix filename 
+    if Sys.file_exists fname then fname else Filename.concat !prefix fname
   in
   let _,ext = split_ext filename in 
     match ext with
@@ -213,7 +217,7 @@ let compile src_outname exec_outname =
       "__COMPILER_NAME__", !compiler_name ;
       "__COMPILER_OPTIONS__", !compiler_options ;
       "__SOURCE_NAME__", src_outname ;
-	  "__EXE_NAME__", exec_outname
+      "__EXE_NAME__", exec_outname
     ]
   in
     match Unix.system cmd with

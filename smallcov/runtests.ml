@@ -56,6 +56,7 @@ let run_tests coverage_outname coverage_exename coverage_sourcename out_path =
         let cmd = Printf.sprintf "touch %s\n" coverage_outname in
         let _ = ignore(Unix.system cmd) in
         let actual_test = test_maker test in 
+	debug "\t%s\n" (test_name actual_test);
         let res = 
           internal_test_case coverage_exename coverage_sourcename actual_test
         in 

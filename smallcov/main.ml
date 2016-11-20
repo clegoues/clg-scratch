@@ -32,6 +32,12 @@ let main () = begin
   ) ; 
 
   let coverage_outname = Filename.concat !instr_outdir !coverage_outname in
+  let coverage_outname =
+    if Filename.is_relative coverage_outname then 
+      Filename.concat (Sys.getcwd ()) coverage_outname
+    else coverage_outname
+  in  
+debug "coverage_outname: %s\n" coverage_outname;
   (* step 1: instrument files *)
     (* next step: if available, read in diff file to only instrument functions modified by human developer *)
   let diffiles = process_diffs () in
@@ -42,12 +48,12 @@ let main () = begin
   in
   let coverage_exename =  Filename.concat !instr_outdir "compiled.out" in
   (* step 2: compile instrumented files *)
-  let _ = compile coverage_srcname coverage_exename in
+  let compiled = compile coverage_srcname coverage_exename in
+    if compiled then
   (* step 3: run instrumented files on test cases *)
-  let _ = run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt" in
-    ()
-
-(* step 4: process output *)
+     run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt"
+    else 
+      debug "failed to compile instrumented code; giving up.\n"
     
 end ;;
 
