@@ -183,6 +183,7 @@ let instrument_files fmap coverage_outname source_dir = begin
   let avail_fspecs = get_available_fns () in
 debug "c\n";
   let get_fns fname cfile = 
+    debug "fname: %s\n cfile: %s" fname cfile;
     try
       StringMap.find fname avail_fspecs
     with Not_found ->
@@ -197,6 +198,7 @@ debug "c\n";
     StringMap.fold
       (fun fname cfile acc ->  
         let outname = Filename.concat source_dir fname  in
+          debug "e\n";
         let fns = get_fns fname cfile in 
           debug "Functions modified:\n"; 
           liter (fun fname -> debug "\t%s\n" fname) fns;
