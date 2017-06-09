@@ -42,6 +42,7 @@ let get_available_diffs () =
         in 
         let loc = Str.search_backward diff_suff fname (String.length fname) in
         let actual_fname = String.sub fname 0 loc in
+          debug "fname: %s\n" actual_fname;
           StringMap.add actual_fname dfile acc) (StringMap.empty) (get_files !diff_files)
 
 let process_diff fname dfile = (* returns a list of ranges *)
