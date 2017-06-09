@@ -9,3 +9,6 @@ echo "--prefix preprocessed" >> cov.config
 echo "--compcmd ./compile.sh __EXE_NAME__ >& /dev/null" >> cov.config
 diffs=`find diffs/ -follow | grep "\-diff"`
 echo "--diffs $diffs" >> cov.config
+
+./smallcov cov.config
+cat coveringtests.txt
