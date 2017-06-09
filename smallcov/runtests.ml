@@ -26,7 +26,7 @@ let internal_test_case exe_name source_name test =
     let base_command = 
       match !test_command with 
       | "" -> 
-        "__TEST_SCRIPT__ __EXE_NAME__ __TEST_NAME__ "^
+        "__TEST_SCRIPT__ __TEST_NAME__  __EXE_NAME__"^
           "__SOURCE_NAME__ 2>/dev/null >/dev/null"
     |  x -> x
       in
