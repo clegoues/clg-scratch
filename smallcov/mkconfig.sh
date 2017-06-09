@@ -11,4 +11,4 @@ diffs=`cd diffs; find . -follow | grep "\-diff" | cut -c 3-`
 echo "--diffs $diffs" >> cov.config
 
 /opt/smallcov/smallcov cov.config
-cat coveringtests.txt
+cat smallcov-report.txt
