@@ -37,7 +37,7 @@ let main () = begin
   let coverage_outname =
     if Filename.is_relative coverage_outname then 
       Filename.concat (Sys.getcwd ()) coverage_outname
-    else coverage_outnameg
+    else coverage_outname
   in  
     (* step 1: load and instrument files *)
   let filemap = from_source !program in
