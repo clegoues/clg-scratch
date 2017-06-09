@@ -10,6 +10,8 @@ RUN apt-get update && \
 	        eval $(opam config env) &&  \
 		    opam install -y cil yojson
 
+RUN cd /bin/; rm sh; ln -s bash sh
+
 ADD smallcov /tmp/smallcov
 
 # install smallcov, then remove OCaml and OPAM
