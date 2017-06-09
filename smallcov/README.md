@@ -49,18 +49,9 @@ This, plus the defaults, suffices.
 ## Real Usage
 
 What you really want to do is run this all in `repairbox` automatically and in
-headless mode.  There are two ways to do this, one that definitely works and one
-that should work soon:
-
-### Definitely works
-
-There is a Dockerfile in clg-scratch/ that will make a container with both
-`smallcov` and `mkconfig.sh` installed in `/opt/smallcov`:
-
-`cd ~/clg-scratch
-docker build -t clg/smallcov .`
-
-Then, from RepairBox:
+headless mode.  The latest RepairBox has a `smallcov.tool.yaml` that describes how to 
+create a container with the `smallcov` tool installed (Chris says this should work; if not, 
+ask him how to "install" a tool in RepairBox.  To execute overall:
 
 `cd ~/RepairBox
 ./repairbox execute manybugs:php:2011-11-11-fcbfbea8d2-c1e510aea8 ~/clg-scratch/smallcov/mkconfig.sh --with smallcov`
