@@ -37,9 +37,7 @@ let main () = begin
       Filename.concat (Sys.getcwd ()) coverage_outname
     else coverage_outname
   in  
-    debug "coverage_outname: %s\n" coverage_outname;
-  (* step 1: instrument files *)
-    (* next step: if available, read in diff file to only instrument functions modified by human developer *)
+    (* step 1: load and instrument files *)
   let filemap = from_source !program in
   let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir in
   let coverage_srcname = 
@@ -47,14 +45,12 @@ let main () = begin
   in
   let coverage_exename =  Filename.concat !instr_outdir "compiled.out" in
   (* step 2: compile instrumented files *)
-  let compiled = compile coverage_srcname coverage_exename in
-    if compiled then
+    if compile coverage_srcname coverage_exename then
      (* step 3: run instrumented files on test cases *)
       run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt"
     else 
       debug "failed to compile instrumented code; giving up.\n"
 end ;;
-
 
 try 
   main ()  
