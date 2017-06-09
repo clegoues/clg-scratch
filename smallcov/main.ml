@@ -20,11 +20,10 @@ let _ =
 let time_at_start = Unix.gettimeofday () 
 
 let main () = begin
-  debug ~force:true "Welcome to smallcov...\n";
   let aligned = Arg.align !options in
     Arg.parse aligned (usage_function aligned usage_msg) usage_msg;
-  debug_out := open_out !debug_str ; 
-
+    debug_out := open_out !debug_str ; 
+  debug ~force:true "Welcome to smallcov...\n";
   (* Bookkeeping information to print out whenever we're done ... *) 
   at_exit (fun () -> 
     debug ~force:true "Wall-Clock Seconds Elapsed: %g\n" 
@@ -38,7 +37,7 @@ let main () = begin
   let coverage_outname =
     if Filename.is_relative coverage_outname then 
       Filename.concat (Sys.getcwd ()) coverage_outname
-    else coverage_outname
+    else coverage_outnameg
   in  
     (* step 1: load and instrument files *)
   let filemap = from_source !program in
