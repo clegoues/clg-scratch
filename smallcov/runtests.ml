@@ -46,7 +46,7 @@ let internal_test_case exe_name source_name test =
       | Unix.WEXITED(0) -> true 
       | _ -> false
 
-let run_tests coverage_outname coverage_exename coverage_sourcename out_path = 
+let run_tests coverage_outname coverage_exename coverage_sourcename = 
   let internal_run_tests  test_maker max_test expected = 
     lfoldl
       (fun (covering,unexpecteds) test ->
