@@ -1,13 +1,16 @@
 open Cil
 
 let debug_out = ref Pervasives.stdout 
+let verbose = ref false
 
-let debug ?force_gui:(force_gui=false) fmt = 
+let debug ?force:(force=false) fmt = 
   let k result = begin
+    if !verbose || force then begin
       output_string !debug_out result ; 
       output_string Pervasives.stdout result ; 
       flush Pervasives.stdout ; 
       flush !debug_out;
+    end
   end in
     Printf.kprintf k fmt 
 
@@ -103,6 +106,7 @@ let options = ref [
   "--debug", Arg.Set_string debug_str, "X print debug to X";
   "--cc", Arg.Set_string compiler_name, "X compiler (default: gcc)";
   "--prefix", Arg.Set_string prefix, "X prefix to location of files";
+  "--verbose", Arg.Set verbose, "Verbose debug output.";
 ] 
 
 let usage_msg = "smallcov: figure out which test cases touch a file/function of interest"

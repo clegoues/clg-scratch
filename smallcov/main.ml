@@ -24,7 +24,7 @@ let main () = begin
 
   (* Bookkeeping information to print out whenever we're done ... *) 
   at_exit (fun () -> 
-    debug "Wall-Clock Seconds Elapsed: %g\n" 
+    debug ~force:true "Wall-Clock Seconds Elapsed: %g\n" 
       ((Unix.gettimeofday ()) -. time_at_start) ;
       Stats2.print !debug_out "smallcov" ; 
     close_out !debug_out ;
@@ -39,17 +39,29 @@ let main () = begin
   in  
     (* step 1: load and instrument files *)
   let filemap = from_source !program in
-  let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir in
+  let instrumented_filenames,function_names = instrument_files filemap coverage_outname !instr_outdir in
   let coverage_srcname = 
     lfoldl (fun acc src -> acc^src^" ") "" instrumented_filenames
   in
   let coverage_exename =  Filename.concat !instr_outdir "compiled.out" in
   (* step 2: compile instrumented files *)
-    if compile coverage_srcname coverage_exename then
+    if compile coverage_srcname coverage_exename then begin
      (* step 3: run instrumented files on test cases *)
-      run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt"
+      let covering_tests, unexpecteds = run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt" in
+        debug ~force:true "::REPORT::\n";
+        debug ~force:true "Functions modified:\n"; 
+        liter (fun fname -> debug ~force:true "\t%s\n" fname) function_names;
+        debug ~force:true "Covering tests:\n";
+        liter
+          (fun test ->
+            debug ~force:true "%s\n" (test_name test)) covering_tests;
+        debug ~force:true "Unexpected test results observed on:\n";
+        liter 
+          (fun test ->
+            debug ~force:true "%s\n" (test_name test)) unexpecteds;
+    end
     else 
-      debug "failed to compile instrumented code; giving up.\n"
+      abort "failed to compile instrumented code; giving up.\n"
 end ;;
 
 try 

@@ -49,34 +49,33 @@ let internal_test_case exe_name source_name test =
 let run_tests coverage_outname coverage_exename coverage_sourcename out_path = 
   let internal_run_tests  test_maker max_test expected = 
     lfoldl
-      (fun acc test ->
+      (fun (covering,unexpecteds) test ->
         let _ = 
           try Unix.unlink coverage_outname with _ -> ()
         in
         let cmd = Printf.sprintf "touch %s\n" coverage_outname in
         let _ = ignore(Unix.system cmd) in
         let actual_test = test_maker test in 
-	debug "\t%s\n" (test_name actual_test);
+	      debug "\t%s\n" (test_name actual_test);
         let res = 
           internal_test_case coverage_exename coverage_sourcename actual_test
         in 
-          if res <> expected then 
-            debug "smallCov: unexpected result on %s\n" (test_name actual_test);
+        let covering = 
           let lines = get_lines coverage_outname in 
             if (llen lines) > 0 then 
-              actual_test :: acc
-            else acc
-          )  [] (1 -- max_test) 
+              actual_test :: covering
+            else covering
+        in
+        let unexpecteds = 
+          if res <> expected then actual_test :: unexpecteds
+          else unexpecteds
+        in
+          covering,unexpecteds
+          ) ([],[]) (1 -- max_test) 
   in
-  let neg_touch = debug "coverage negative:\n"; 
+  let neg_touch,neg_unexpected = debug "coverage negative:\n"; 
       internal_run_tests (fun t -> Negative t) !num_neg_tests false 
   in
-  let pos_touch = debug "coverage positive:\n"; 
+  let pos_touch,pos_unexpected = debug "coverage positive:\n"; 
         internal_run_tests (fun t -> Positive t) !num_pos_tests true in
-  let overall_touch = neg_touch @ pos_touch in
-  let fout = open_out out_path in
-    liter
-      (fun test ->
-        let str = Printf.sprintf "%s\n" (test_name test) in
-          output_string fout str) overall_touch;
-    close_out fout
+    neg_touch @ pos_touch, neg_unexpected @ pos_unexpected

@@ -191,11 +191,11 @@ let instrument_files fmap coverage_outname source_dir = begin
   let prototypes = ref StringMap.empty in
   let instrv = new instrumentVisitor prototypes coverage_outname in
     StringMap.fold
-      (fun fname cfile acc ->  
+      (fun fname cfile (files,funcs) ->  
         let outname = Filename.concat source_dir fname  in
         let fns = get_fns fname cfile in 
-          debug "Functions modified:\n"; 
-          liter (fun fname -> debug "\t%s\n" fname) fns;
+          debug "Instrumenting for fns:\n";
+          liter (fun fn -> debug "\t%s\n" fn) fns;
           visitCilFile (instrv fns fname) cfile;
           cfile.globals <- 
             StringMap.fold (fun _ protos acc ->
@@ -209,8 +209,8 @@ let instrument_files fmap coverage_outname source_dir = begin
           end;
           ensure_directories_exist outname;
           output_cil_file outname cfile;
-          outname :: acc
-      ) fmap []
+          outname :: files, fns @ funcs
+      ) fmap ([],[])
 end
 
 let from_source (filename : string) = 
