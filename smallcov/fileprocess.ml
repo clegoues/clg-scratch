@@ -177,8 +177,11 @@ class instrumentVisitor prototypes instr_outname fns fname = object
 end
 
 let instrument_files fmap coverage_outname source_dir = begin
+  debug "a\n";
   let avail_dfiles = get_available_diffs () in
+    debug "b\n";
   let avail_fspecs = get_available_fns () in
+debug "c\n";
   let get_fns fname cfile = 
     try
       StringMap.find fname avail_fspecs
@@ -190,6 +193,7 @@ let instrument_files fmap coverage_outname source_dir = begin
   in
   let prototypes = ref StringMap.empty in
   let instrv = new instrumentVisitor prototypes coverage_outname in
+    debug "d\n";
     StringMap.fold
       (fun fname cfile acc ->  
         let outname = Filename.concat source_dir fname  in
