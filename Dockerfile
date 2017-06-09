@@ -16,7 +16,7 @@ ADD smallcov /tmp/smallcov
 ENV PATH "$PATH:/opt/smallcov"
 RUN cd /tmp/smallcov && \
     eval $(opam config env) &&  \
-        make && \
+        make clean; make && \
 	    mkdir -p /opt/smallcov && \
 	        mv smallcov /opt/smallcov && \
 		    apt-get purge -y opam ocaml m4 && \
