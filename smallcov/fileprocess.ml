@@ -42,7 +42,6 @@ let get_available_diffs () =
         in 
         let loc = Str.search_backward diff_suff fname (String.length fname) in
         let actual_fname = String.sub fname 0 loc in
-          debug "fname: %s\n" actual_fname;
           StringMap.add actual_fname dfile acc) (StringMap.empty) (get_files !diff_files)
 
 let process_diff fname dfile = (* returns a list of ranges *)
@@ -178,13 +177,9 @@ class instrumentVisitor prototypes instr_outname fns fname = object
 end
 
 let instrument_files fmap coverage_outname source_dir = begin
-  debug "a\n";
   let avail_dfiles = get_available_diffs () in
-    debug "b\n";
   let avail_fspecs = get_available_fns () in
-debug "c\n";
   let get_fns fname cfile = 
-    debug "fname: %s\n" fname ;
     try
       StringMap.find fname avail_fspecs
     with Not_found ->
@@ -195,11 +190,9 @@ debug "c\n";
   in
   let prototypes = ref StringMap.empty in
   let instrv = new instrumentVisitor prototypes coverage_outname in
-    debug "d\n";
     StringMap.fold
       (fun fname cfile acc ->  
         let outname = Filename.concat source_dir fname  in
-          debug "e\n";
         let fns = get_fns fname cfile in 
           debug "Functions modified:\n"; 
           liter (fun fname -> debug "\t%s\n" fname) fns;

@@ -38,14 +38,11 @@ let main () = begin
     else coverage_outname
   in  
     (* step 1: load and instrument files *)
-    debug "one\n";
   let filemap = from_source !program in
-    debug "two\n";
   let instrumented_filenames = instrument_files filemap coverage_outname !instr_outdir in
   let coverage_srcname = 
     lfoldl (fun acc src -> acc^src^" ") "" instrumented_filenames
   in
-    debug "three\n";
   let coverage_exename =  Filename.concat !instr_outdir "compiled.out" in
   (* step 2: compile instrumented files *)
     if compile coverage_srcname coverage_exename then
