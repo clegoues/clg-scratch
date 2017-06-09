@@ -10,7 +10,7 @@ parsing/manipulating C programs.
 general, but I've only really tested it the ManyBugs context. 
 
 Additionally, `smallcov` probably only works on single-file scenarios for now,
-because of assumptions it makes about the structure of the diffs/ directory.
+because of assumptions it makes about the structure of the `diffs/` directory.
 
 ## Caveat
 
@@ -41,7 +41,8 @@ following cov.config:
 --testscript ./test.sh
 --prefix preprocessed
 --compcmd ./compile.sh __EXE_NAME__
---diffs ext/spl/spl_directory.c-diff```
+--diffs ext/spl/spl_directory.c-diff
+```
 
 This, plus the defaults, suffices.  
 
@@ -75,3 +76,16 @@ built smallcov, above).
 
 I'm working to export clg/smallcov to the squaresLab dockerHub account, at which
 point you won't need to build the container that contains the `smallcov` tool yourself.
+
+## Workflow and output
+
+`smallcov` parses the diff files to identify which functions to instrument,
+instruments those functions, compiles the code, and then runs all the tests on
+it.
+
+Given the vagaries of MB, it is likely that not all positive test cases will
+pass.  Make sure most of them do, but if it's just an occassional failure, don't
+worry about it, it's probably "good enough."
+
+`smallcov` first outputs the functions it will instrument, and finishes by
+spitting out the test identifiers that touch the instrumented functions.
