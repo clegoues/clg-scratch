@@ -10,8 +10,8 @@ let _ =
     [ 
       "--testscript", Arg.Set_string test_script, "X test script." ;
       "--testcomm", Arg.Set_string test_command, "X test command."; 
-      "--postests", Arg.Set_int num_pos_tests, "X number of positive tests.";
-      "--negtests", Arg.Set_int num_neg_tests, "X number of negative tests."
+      "--pos-tests", Arg.Set_int num_pos_tests, "X number of positive tests.";
+      "--neg-tests", Arg.Set_int num_neg_tests, "X number of negative tests."
     ]
 type test = 
   | Positive of int 
