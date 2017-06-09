@@ -18,6 +18,7 @@ let _ =
 let time_at_start = Unix.gettimeofday () 
 
 let main () = begin
+  debug ~force:true "Welcome to smallcov...\n";
   let aligned = Arg.align !options in
     Arg.parse aligned (usage_function aligned usage_msg) usage_msg;
   debug_out := open_out !debug_str ; 
@@ -46,6 +47,7 @@ let main () = begin
   let coverage_exename =  Filename.concat !instr_outdir "compiled.out" in
   (* step 2: compile instrumented files *)
     if compile coverage_srcname coverage_exename then begin
+    debug ~force:true "Files instrumented and compiled, about to run tests...\n";
      (* step 3: run instrumented files on test cases *)
       let covering_tests, unexpecteds = run_tests coverage_outname coverage_exename coverage_srcname "coveringtests.txt" in
         debug ~force:true "::REPORT::\n";
